@@ -32,7 +32,7 @@ pub unsafe fn write(fd: u32, buf: *const u8, count: usize) {
 
 #[cfg(target_os = "linux")]
 pub unsafe fn exit(code: i32) -> ! {
-    const SYSCALL_NUMBER: u64 = 1;
+    const SYSCALL_NUMBER: u64 = 60;
     asm!(
         "syscall",
         in("rax") SYSCALL_NUMBER,
