@@ -5,19 +5,26 @@ use core::arch::asm;
 use core::panic;
 
 #[no_mangle]
-pub unsafe extern "C" fn _start() -> ! {
-    print(b"hello world\n");
+pub extern "C" fn _start() -> ! {
+    print("hello world\n");
     exit(0);
 }
 
-pub fn print(s: &[u8]) {
+pub fn print(str: &str) {
     const STDOUT_FILENO: u32 = 1;
     unsafe {
-        write(STDOUT_FILENO, s.as_ptr(), s.len());
+        write(STDOUT_FILENO, str.as_ptr(), str.len());
     }
 }
 
-#[cfg(target_os = "linux")]
+pub fn eprint(str: &str) {
+    const STDERR_FILENO: u32 = 2;
+    unsafe {
+        write(STDERR_FILENO, str.as_ptr(), str.len());
+    }
+}
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub unsafe fn write(fd: u32, buf: *const u8, count: usize) {
     const SYSCALL_NUMBER: u64 = 1;
     asm!(
@@ -30,18 +37,21 @@ pub unsafe fn write(fd: u32, buf: *const u8, count: usize) {
     );
 }
 
-#[cfg(target_os = "linux")]
-pub unsafe fn exit(code: i32) -> ! {
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub fn exit(code: i32) -> ! {
     const SYSCALL_NUMBER: u64 = 60;
-    asm!(
-        "syscall",
-        in("rax") SYSCALL_NUMBER,
-        in("rdi") code,
-        options(noreturn)
-    )
+    unsafe {
+        asm!(
+            "syscall",
+            in("rax") SYSCALL_NUMBER,
+            in("rdi") code,
+            options(noreturn)
+        )
+    }
 }
 
 #[panic_handler]
 fn panic(_info: &panic::PanicInfo) -> ! {
-    unsafe { exit(1) }
+    eprint("panic\n");
+    exit(1);
 }
